@@ -18,6 +18,9 @@ function Manager(limit, builder) {
   this.generator = null;
   this.retries = 5;
   this.factor = 3;
+  this.minTimeout = 1 * 1000;   // 1 sec
+  this.maxTimeout = 60 * 1000;  // 60 secs
+  this.randomize = true;
 
   // some stats that can be used for metrics
   this.metrics = {
@@ -95,9 +98,9 @@ Manager.prototype.pull = function pull(fn) {
   var operation = retry.operation({
           retries: this.retries
         , factor: this.factor
-        , minTimeout: 1 * 1000
-        , maxTimeout: 60 * 1000
-        , randomize: true
+        , minTimeout: this.minTimeout
+        , maxTimeout: this.maxTimeout
+        , randomize: this.randomize
       })
     , self = this;
 
