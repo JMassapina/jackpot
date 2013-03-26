@@ -17,6 +17,7 @@ function Manager(limit, builder) {
   this.pending = 0;
   this.generator = null;
   this.retries = 5;
+  this.factor = 3;
 
   // some stats that can be used for metrics
   this.metrics = {
@@ -93,7 +94,7 @@ Manager.prototype.listen = function listen(net) {
 Manager.prototype.pull = function pull(fn) {
   var operation = retry.operation({
           retries: this.retries
-        , factor: 3
+        , factor: this.factor
         , minTimeout: 1 * 1000
         , maxTimeout: 60 * 1000
         , randomize: true
