@@ -149,6 +149,7 @@ Manager.prototype.allocate = function allocate(fn) {
   function either(err) {
     this.removeListener('error', either);
     this.removeListener('connect', either);
+    this.removeListener('timeout', onTimeout);
 
     // add to the pool
     self.pool.push(this);
@@ -156,6 +157,22 @@ Manager.prototype.allocate = function allocate(fn) {
 
     fn(err, this);
   }
+
+  /**
+   * when dns is unreliable, sometimes the callback from dns.lookup() when connecting to 
+   * the socket comes after the socket has timed out and closed. Therefore, neither 'error' 
+   * nor 'connect' events fire and the pending count is never decremented. Listen to the 
+   * timeout event and treat this as an error case.
+   */
+   function onTimeout() {
+    this.removeListener('error', either);
+    this.removeListener('connect', either);
+    this.removeListener('timeout', onTimeout);
+
+    self.pending--;
+
+    fn(new Error('Timeout waiting for socket connection to ' + this.serverAddress), this);
+   }
 
   var probabilities = []
     , self = this
@@ -198,7 +215,7 @@ Manager.prototype.allocate = function allocate(fn) {
       if (connection) {
         this.pending++;
         this.listen(connection);
-        connection.on('error', either).on('connect', either);
+        connection.on('error', either).on('connect', either).on('timeout', onTimeout);
 
         return this;
       }
@@ -209,7 +226,7 @@ Manager.prototype.allocate = function allocate(fn) {
 
         self.pending++;
         self.listen(connection);
-        return connection.on('error', either).on('connect', either);
+        return connection.on('error', either).on('connect', either).on('timeout', onTimeout);
       });
     }
   }
